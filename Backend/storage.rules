@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member(gid) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/groups/$(gid))
+        && request.auth.uid in firestore.get(/databases/(default)/documents/groups/$(gid)).data.memberIDs;
+    }
+    match /groups/{gid}/uploads/{uid}/{file} {
+      allow read: if member(gid);
+      allow create: if member(gid) && request.auth.uid == uid
+        && request.resource.size > 0
+        && ((request.resource.contentType == 'image/jpeg' && request.resource.size <= 8 * 1024 * 1024 && file.matches('.*[.]jpg'))
+          || (request.resource.contentType == 'video/mp4' && request.resource.size <= 30 * 1024 * 1024 && file.matches('.*[.]mp4')));
+      allow update: if false; // Immutable objects; publish references a new UUID on replacement.
+      allow delete: if member(gid) && request.auth.uid == uid;
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function member(gid) { return signedIn() && exists(/databases/$(database)/documents/groups/$(gid)) && request.auth.uid in get(/databases/$(database)/documents/groups/$(gid)).data.memberIDs; }
+    function owner(gid) { return member(gid) && get(/databases/$(database)/documents/groups/$(gid)).data.ownerID == request.auth.uid; }
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName','username','createdAt'])
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40
+        && request.resource.data.username is string && request.resource.data.username.size() <= 30
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','username'])
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 40
+        && request.resource.data.username is string && request.resource.data.username.size() <= 30;
+      allow delete: if false; // Authenticated callable performs complete account cleanup.
+    }
+    match /groups/{gid} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIDs;
+      allow create, delete: if false; // Transactional server functions own membership and timezone.
+      allow update: if owner(gid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','description'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.description is string && request.resource.data.description.size() <= 300;
+      match /members/{uid} { allow read: if member(gid); allow write: if false; }
+      match /moments/{mid} {
+        allow read: if member(gid);
+        allow write: if false; // Callable validates identity, day, membership, media object and stable ID.
+        match /reactions/{rid} {
+          allow read: if member(gid);
+          allow create, update: if member(gid)
+            && exists(/databases/$(database)/documents/groups/$(gid)/moments/$(mid))
+            && request.resource.data.keys().hasOnly(['userID','type'])
+            && request.resource.data.userID == request.auth.uid
+            && request.resource.data.type in ['Laugh','Fire','Plot twist']
+            && rid == request.auth.uid + '_' + request.resource.data.type;
+          allow delete: if member(gid) && resource.data.userID == request.auth.uid;
+        }
+      }
+      match /episodes/{eid} { allow read: if member(gid); allow write: if false; }
+      match /edits/{eid} {
+        allow read: if member(gid);
+        allow create, update: if member(gid)
+          && request.resource.data.keys().hasOnly(['userID','episodeID','title','orderedMomentIDs','excludedMomentIDs','style','captionsEnabled','coverMomentID'])
+          && request.resource.data.userID == request.auth.uid
+          && eid == request.auth.uid + '_' + request.resource.data.episodeID
+          && request.resource.data.episodeID is string
+          && request.resource.data.title is string && request.resource.data.title.size() <= 120
+          && request.resource.data.orderedMomentIDs is list && request.resource.data.orderedMomentIDs.size() <= 24
+          && request.resource.data.excludedMomentIDs is list && request.resource.data.excludedMomentIDs.size() <= 24
+          && request.resource.data.style in ['Cinematic','Comedy','Retro']
+          && request.resource.data.captionsEnabled is bool;
+        allow delete: if member(gid) && resource.data.userID == request.auth.uid;
+      }
+    }
+    match /invitations/{hash} { allow read, write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

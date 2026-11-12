@@ -1,0 +1,6 @@
+{
+  "name": "plottwist-security-tests",
+  "private": true,
+  "scripts": {"test":"firebase emulators:exec --project demo-plottwist --only firestore,storage \"node --test tests/security.test.cjs\""},
+  "devDependencies": {"firebase-tools":"^14.0.0","@firebase/rules-unit-testing":"^4.0.0","firebase":"^11.0.0"}
+}

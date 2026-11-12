@@ -1,0 +1,20 @@
+# Optional: xcodegen generate --spec project-firebase.yml
+# Downloads Firebase SDKs and compiles the gateway; does NOT activate cloud synchronization.
+include: [project.yml]
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    from: 11.0.0
+targets:
+  PlotTwist:
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Firebase
+        product: FirebaseFunctions
+      - package: Firebase
+        product: FirebaseAppCheck

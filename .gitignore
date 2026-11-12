@@ -1,0 +1,11 @@
+.DS_Store
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+GoogleService-Info.plist
+.firebase/
+*-debug.log
+node_modules/
+.env*
+!.env.example

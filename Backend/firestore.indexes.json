@@ -1,0 +1,1 @@
+{"indexes":[{"collectionGroup":"moments","queryScope":"COLLECTION","fields":[{"fieldPath":"weekID","order":"ASCENDING"},{"fieldPath":"createdAt","order":"ASCENDING"}]}],"fieldOverrides":[{"collectionGroup":"invitations","fieldPath":"expiresAt","ttl":true,"indexes":[]}]}
